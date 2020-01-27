@@ -1,0 +1,358 @@
+/**
+ * This file is part of the "smath" project
+ *   Copyright (c) 2020 Christian Parpart <christian@parpart.family>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+#pragma once
+
+#include <smath/isqrt.h>
+#include <smath/value_traits.h>
+#include <smath/util.h>
+
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <functional>
+#include <initializer_list>
+#include <ostream>
+
+namespace smath {
+
+/**
+ * Base interface for every matrix expression (such as multiplication, addition, complement, det, minor, ...).
+ */
+template<std::size_t M, std::size_t N, typename F, typename A>
+struct mat_expr
+{
+    constexpr F operator()(std::size_t i, std::size_t j) const noexcept {
+        return static_cast<A const&>(*this)(i, j);
+    }
+};
+
+// {{{ matrix comparison
+template<
+    std::size_t M,
+    std::size_t N,
+    typename F,
+    //typename F2,
+    typename A,
+    typename B
+>
+constexpr inline bool operator==(mat_expr<M, N, F, A> const& a, mat_expr<M, N, F, B> const& b) noexcept
+{
+    for (auto [i, j] : times(0, M) | times(0, N))
+        if (a(i, j) != b(i, j))
+            return false;
+
+    return true;
+}
+
+template<
+    std::size_t M,
+    std::size_t N,
+    typename F,
+    //typename F2,
+    typename A,
+    typename B
+>
+constexpr inline bool operator!=(mat_expr<M, N, F, A> const& a, mat_expr<M, N, F, B> const& b) noexcept
+{
+    return !(a == b);
+}
+// }}}
+// {{{ matrix transform(A, B) -> C
+// Transforms two matrices into one by applying given binary operator on each coefficient.
+template<
+    std::size_t M,
+    std::size_t N,
+    typename F,
+    typename A,
+    typename B,
+    typename BinaryOp
+>
+constexpr inline auto transform(mat_expr<M, N, F, A> const& a,
+                                mat_expr<M, N, F, B> const& b,
+                                BinaryOp const& op)
+{
+    struct Mapping : public mat_expr<M, N, F, Mapping> {
+        A const& a;
+        B const& b;
+        BinaryOp const& op;
+
+        constexpr Mapping(A const& _a, B const& _b, BinaryOp const& _op) noexcept : a{_a}, b{_b}, op{_op} {}
+        constexpr F operator()(int i, int j) const { return op(a(i, j), b(i, j)); }
+    };
+
+    return Mapping{static_cast<A const&>(a), static_cast<B const&>(b), op};
+}
+// }}}
+// {{{ matrix addition / subtraction
+template <std::size_t M, std::size_t N, typename F, typename A, typename B>
+constexpr inline auto operator+(mat_expr<M, N, F, A> const& a,
+                                mat_expr<M, N, F, B> const& b)
+{
+    return transform(a, b, [](F const& x, F const& y) constexpr { return x + y; });
+}
+
+template <std::size_t M, std::size_t N, typename F, typename A, typename B>
+constexpr inline auto operator-(mat_expr<M, N, F, A> const& a,
+                                mat_expr<M, N, F, B> const& b)
+{
+    return transform(a, b, [](F const& x, F const& y) constexpr { return x - y; });
+}
+// }}}
+// {{{ scalar multiplication
+template<
+    std::size_t M,
+    std::size_t N,
+    typename F,
+    typename A,
+    typename std::enable_if_t<std::is_arithmetic_v<F>, std::size_t> = 0
+>
+constexpr inline auto operator*(F s, mat_expr<M, N, F, A> const& a)
+{
+    struct ScalarMult : public mat_expr<M, N, F, ScalarMult> {
+        F s;
+        A const& a;
+
+        constexpr ScalarMult(F _s, A const& _a) noexcept : s{_s}, a{_a} {}
+        constexpr F operator()(int i, int j) const { return s * a(i, j); }
+    };
+
+    return ScalarMult{s, static_cast<A const&>(a)};
+}
+// }}}
+// {{{ matrix multiplication
+template<std::size_t M, std::size_t N, std::size_t K, typename F, typename A, typename B>
+constexpr inline auto operator*(mat_expr<M, N, F, A> const& a,
+                                mat_expr<N, K, F, B> const& b)
+{
+    struct MatMult : public mat_expr<M, K, F, MatMult> {
+        A const& a;
+        B const& b;
+        constexpr MatMult(A const& _a, B const& _b) noexcept : a{_a}, b{_b} {}
+        constexpr F operator()(int i, int j) const {
+            auto v = zero<F>;
+            for (std::size_t l : times(0u, N))
+                v += a(i, l) * b(l, j);
+            return v;
+        }
+    };
+
+    return MatMult{static_cast<A const&>(a), static_cast<B const&>(b)};
+}
+// }}}
+// {{{ other free functions
+template <std::size_t M, std::size_t N, typename F, typename A>
+constexpr std::size_t weigh_trivials_in_row(mat_expr<M, N, F, A> const& m, size_t i)
+{
+    std::size_t c = 0;
+    for (std::size_t j : times(0u, N))
+    {
+        F const v = m(i, j);
+        F const w = v < zero<F> ? -v : v;
+        if (w == zero<F> || w == one<F> || w == two<F>)
+            c += three<F> - w;
+    }
+    return c;
+}
+
+template <std::size_t M, std::size_t N, typename F, typename A>
+constexpr std::size_t weigh_trivials_in_column(mat_expr<M, N, F, A> const& m, size_t j)
+{
+    std::size_t c = 0;
+    for (std::size_t i : times(0u, N))
+    {
+        F const v = m(i, j);
+        F const w = v < zero<F> ? -v : v;
+        if (w == zero<F> || w == one<F> || w == two<F>)
+            c += three<F> - w;
+    }
+
+    return c;
+}
+
+template <std::size_t M, std::size_t N, typename F, typename A>
+constexpr size_t count_zeros(mat_expr<M, N, F, A> const& m)
+{
+    std::size_t a = 0;
+    for (auto [i, j] : times(0u, M) | times(0u, N))
+        if (m(i, j) == zero<F>)
+            ++a;
+
+    return a;
+}
+
+template <std::size_t M, std::size_t N, typename F, typename A>
+constexpr size_t count_ones(mat_expr<M, N, F, A> const& m)
+{
+    std::size_t a = 0;
+    for (auto [i, j] : times(0u, M) | times(0u, N))
+        if (m(i, j) == one<F>)
+            ++a;
+    return a;
+}
+
+template <std::size_t M, std::size_t N, typename F, typename A>
+constexpr float density(mat_expr<M, N, F, A> const& m)
+{
+    auto const total = M * N;
+    return static_cast<float>(total - count_zeros(m)) / total;
+}
+
+template <std::size_t M, std::size_t N, typename F, typename A>
+constexpr float sparsity(mat_expr<M, N, F, A> const& m)
+{
+    return 1.0 - density(m);
+}
+
+template<
+    std::size_t N,
+    typename F,
+    typename A
+>
+constexpr inline F trace(mat_expr<N, N, F, A> const& a)
+{
+    F acc = zero<F>;
+    for (std::size_t k : times(0u, N))
+        acc = acc + a(k, k);
+    return acc;
+}
+
+template <std::size_t M, std::size_t N, typename F, typename A>
+constexpr inline auto transpose(mat_expr<M, N, F, A> const& a)
+{
+    struct Transpose : public mat_expr<N, M, F, Transpose>
+    {
+        A const& a;
+        constexpr Transpose(A const& _a) noexcept : a{_a} {}
+        constexpr F operator()(std::size_t i, std::size_t j) const noexcept { return a(j, i); }
+    };
+
+    return Transpose{static_cast<A const&>(a)};
+}
+
+template<
+    std::size_t M,
+    std::size_t N,
+    typename F,
+    typename A
+>
+constexpr inline auto complement(mat_expr<M, N, F, A> const& a, std::size_t i, std::size_t j)
+{
+    struct Complement : public mat_expr<M - 1, N - 1, F, Complement>
+    {
+        A const& a;
+        std::size_t const i;
+        std::size_t const j;
+
+        constexpr Complement(A const& _a, std::size_t _i, std::size_t _j) noexcept : a{_a}, i{_i}, j{_j} {}
+
+        constexpr F operator()(std::size_t k, std::size_t l) const noexcept
+        {
+            return k < i
+                ? l < j
+                    ? a(k, l)
+                    : a(k, l + 1)
+                : l < j
+                    ? a(k + 1, l)
+                    : a(k + 1, l + 1);
+        }
+    };
+    return Complement{static_cast<A const&>(a), i, j};
+}
+// }}}
+// {{{ det(A)
+template <typename F, typename A>
+constexpr inline F det(mat_expr<1, 1, F, A> const& a) noexcept
+{
+    return a(0, 0);
+}
+
+template <typename F, typename A>
+constexpr inline F det(mat_expr<2, 2, F, A> const& a) noexcept
+{
+    return a(0, 0) * a(1, 1) - a(1, 0) * a(0, 1);
+}
+
+template <typename F, typename A>
+constexpr inline F det(mat_expr<3, 3, F, A> const& a) noexcept
+{
+    return a(0, 0) * a(1, 1) * a(2, 2)
+         + a(1, 0) * a(2, 1) * a(0, 2)
+         + a(2, 0) * a(0, 1) * a(1, 2)
+         - a(2, 0) * a(1, 1) * a(0, 2)
+         - a(2, 1) * a(1, 2) * a(0, 0)
+         - a(2, 2) * a(1, 0) * a(0, 1);
+}
+
+/**
+ * Finds the best matrix row or column to expand by.
+ *
+ * @returns a pair whose first argument is the row or column index and the second argument
+ *          determines whether or not the first one is a row index (column index otherwise).
+ */
+template <std::size_t N, typename F, typename A>
+constexpr inline std::pair<std::size_t, bool> find_expansion_vector(mat_expr<N, N, F, A> const& a) noexcept
+{
+    std::size_t expansion_index = 0;
+    std::size_t most_trivials = weigh_trivials_in_row(a, 0);
+
+    for (std::size_t k : times(1u, N - 1))
+        if (auto const c = weigh_trivials_in_row(a, k); c > most_trivials)
+        {
+            expansion_index = k;
+            most_trivials = c;
+        }
+
+    bool expandByRow = true;
+    for (std::size_t k : times(0u, N))
+        if (auto const c = weigh_trivials_in_column(a, k); c > most_trivials)
+        {
+            expandByRow = false;
+            expansion_index = k;
+            most_trivials = c;
+        }
+
+    return {expansion_index, expandByRow};
+}
+
+// det(A) via laplace expansion
+template <std::size_t N, typename F, typename A>
+constexpr inline F det(mat_expr<N, N, F, A> const& a) noexcept
+{
+    auto const [expansion_index, expandByRow] = find_expansion_vector(a);
+
+    F v = zero<F>;
+
+    if (expandByRow)
+    {
+        std::size_t const i = expansion_index;
+        for (std::size_t j : times(0u, N))
+            v += (i + j) % 2 == 0
+                ? +a(i, j) * det(complement(a, i, j))
+                : -a(i, j) * det(complement(a, i, j));
+    }
+    else // expand by row
+    {
+        std::size_t const j = expansion_index;
+        for (std::size_t i : times(0u, N))
+            v += (i + j) % 2 == 0
+                ? +a(i, j) * det(complement(a, i, j))
+                : -a(i, j) * det(complement(a, i, j));
+    }
+
+    return v;
+}
+// }}}
+
+} // namespace smath
+

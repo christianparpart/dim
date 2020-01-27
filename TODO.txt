@@ -1,0 +1,58 @@
+### C++20 playground
+- BUT still be able to build on C++17!
+- [ ] C++ modules
+- [ ] C++ concepts
+
+### util:
+- [ ] TimesObj<T> times<T=size_t>(start, count, step=1) - with random access indicator
+- [ ] for_each(Times, Lambda)
+- [ ] times(0, X) | [](auto x) { ... }
+- [ ] times(0, X) | times(0, Y) | [](auto x, auto y) { ... }
+- [ ] grid_times(i0, iN, istep, j0, jN, jstep) - to replace doubled for-loops with one
+- [ ] then make use of it by rewriting all those manual for loops
+
+### numeric:
+- software integer<>
+- software rational<>
+
+### algebra:
+- permutation<> (ported from my F# code)
+
+### algebra.mat:
+- [x] transpose<M, N, F>(): -> mat<N, M, F>
+- [ ] complement()
+- [ ] minor()
+- [ ] cofactor()
+- [ ] adjugate()
+- [ ] inverse_gauss(), ...
+- [ ] det_leibnitz<N, F>()
+- [x] det<2, F>(A)
+- [x] det<3, F>(A)
+- [x] det<N, F>(A)
+- alias: zero<mat<M, N, F>> = zeros<M, N, F>();
+- alias: one<mat<N, F>> = diag<N, F>(1);
+- column_rank(mat)
+- row_rank(mat)
+- rank(mat)
+- provide begin()/end()
+- provide random access index in a way STL algorithms can benefit from (e.g. make use of std::par)
+- customizable underlying storage  (such as: dense(default), sparse, sparse compressed, ...)
+- more enforced constexpr support (depending on the underlying storage)
+
+### algebra.vec:
+- make vec just a special type of mat
+- using vec<N, F> = mat<N, 1, F>;
+
+### algebra.solver
+- linear system of equations solver (port over)
+- linear regression solver
+
+### algebra.symbolic
+- port over from F#: symbolic::expr
+
+### fourier
+- DFT, IDFT (support std::par)
+- FFT, IFFT (support std::par)
+
+### documentation
+- document all public API somehow nicely
