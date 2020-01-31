@@ -13,7 +13,6 @@
  */
 #include <smath/mat.h>
 #include <smath/mat_ostream.h>
-#include <smath/vec.h>
 
 #include <catch2/catch.hpp>
 
@@ -32,15 +31,33 @@ TEST_CASE("mat.ctor")
         REQUIRE(a(0, 2) == 0.2);
     }
 
-    SECTION("via element-initializer lambda") {
-        auto constexpr static a = mat<2, 2, int>{[](auto i, auto j) {
-            return 2 * i + j;
+    SECTION("init") {
+        // TODO: (GCC) why is constexpr here not working?
+        auto const static a = init<2, 3, int>([](std::size_t i, std::size_t j) constexpr {
+            return 3 * i + j;
+        });
+
+        REQUIRE(a(0, 0) == 0);
+        REQUIRE(a(0, 1) == 1);
+        REQUIRE(a(0, 2) == 2);
+
+        REQUIRE(a(1, 0) == 3);
+        REQUIRE(a(1, 1) == 4);
+        REQUIRE(a(1, 2) == 5);
+    }
+
+    SECTION("lambda element-initializer") {
+        auto constexpr static a = mat<2, 3, int>{[](auto i, auto j) constexpr {
+            return 3 * i + j;
         }};
 
         REQUIRE(a(0, 0) == 0);
         REQUIRE(a(0, 1) == 1);
-        REQUIRE(a(1, 0) == 2);
-        REQUIRE(a(1, 1) == 3);
+        REQUIRE(a(0, 2) == 2);
+
+        REQUIRE(a(1, 0) == 3);
+        REQUIRE(a(1, 1) == 4);
+        REQUIRE(a(1, 2) == 5);
     }
 }
 
@@ -109,6 +126,42 @@ TEST_CASE("mat.ones.squared")
     REQUIRE(m(1, 1) == 1);
 }
 
+TEST_CASE("mat.vec")
+{
+    SECTION("row-vector") {
+        auto constexpr v = mat<1, 3, int>{0, 1, 2};
+        REQUIRE(v(0) == 0);
+        REQUIRE(v(1) == 1);
+        REQUIRE(v(2) == 2);
+    }
+
+    SECTION("column-vector") {
+        auto constexpr v = mat<3, 1, int>{0, 1, 2};
+        REQUIRE(v(0) == 0);
+        REQUIRE(v(1) == 1);
+        REQUIRE(v(2) == 2);
+    }
+}
+
+TEST_CASE("mat.abs")
+{
+    SECTION("row-vector") {
+        auto constexpr u = mat<1, 3, int>{0, 1, 2};
+        auto constexpr v = mat<1, 3, int>{0, -1, -2};
+        auto const w = abs(v);
+        REQUIRE(u == w);
+    }
+
+    SECTION("column-vector") {
+        auto const v = mat<3, 1, int>{0, 1, 2};
+        auto const w = mat<3, 1, int>{0, 1, -2};
+        auto const s = abs(w);
+        auto const S = mat{s};
+        CHECK(v == s);
+        CHECK(v == S);
+    }
+}
+
 TEST_CASE("mat.add")
 {
     auto constexpr a = mat{1, 2,
@@ -134,6 +187,17 @@ TEST_CASE("mat.sub")
     auto const A = c - b;
 
     REQUIRE(a == A);
+}
+
+TEST_CASE("mat.neg")
+{
+    auto constexpr original = mat{-1, 2,
+                                  3, -4};
+    auto constexpr expected = mat{1, -2,
+                                  -3, 4};
+    auto const evaluated = -original;
+
+    REQUIRE(evaluated == expected);
 }
 
 TEST_CASE("mat.scalar_mult")

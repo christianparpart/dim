@@ -70,14 +70,16 @@ class mat : public mat_expr<M, N, F, mat<M, N, F>> {
      *
      * @param _init The element-initializer function that must return the value for each element [i, j].
      */
-    template <typename Initializer,
-              typename std::enable_if_t<
-                  std::is_invocable_r_v<F, Initializer, std::size_t, std::size_t>,
-                  int> = 0>
+    template<
+        typename Initializer,
+        typename std::enable_if_t<
+            std::is_invocable_r_v<F, Initializer, std::size_t, std::size_t>,
+            int> = 0
+    >
     constexpr explicit mat(Initializer const& _init) noexcept
         : values_{}
     {
-        for (auto [i, j] : times(0, N) | times(0, N))
+        for (auto [i, j] : times(0, M) | times(0, N))
             values_[i * N + j] = _init(i, j);
     }
 
@@ -101,6 +103,14 @@ class mat : public mat_expr<M, N, F, mat<M, N, F>> {
      * @returns a mutable reference to the element at given index @p i and @p j (zero based indices).
      */
     constexpr F& operator()(std::size_t i, std::size_t j) { return values_[i * N + j]; }
+
+    constexpr F const& operator()(std::size_t i) const noexcept
+    {
+        if constexpr (M == 1 || N == 1)
+            return values_[i];
+        else
+            static_assert(true, "WTF?");
+    }
 
   private:
     Storage values_;

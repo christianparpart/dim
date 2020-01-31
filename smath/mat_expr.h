@@ -35,6 +35,18 @@ struct mat_expr
     constexpr F operator()(std::size_t i, std::size_t j) const noexcept {
         return static_cast<A const&>(*this)(i, j);
     }
+
+    constexpr F const& operator()(std::size_t i) const noexcept
+    {
+        if constexpr (M == 1)
+            return (*this)(0, i);
+        else if constexpr (N == 1)
+            return (*this)(i, 0);
+        else
+            static_assert("WTF?");
+    }
+
+    constexpr std::size_t size() const noexcept { return M * N; }
 };
 
 // {{{ matrix comparison
@@ -68,6 +80,27 @@ constexpr inline bool operator!=(mat_expr<M, N, F, A> const& a, mat_expr<M, N, F
     return !(a == b);
 }
 // }}}
+// {{{ init
+template<
+    std::size_t M,
+    std::size_t N,
+    typename F,
+    typename Initializer,
+    typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0,
+    typename std::enable_if_t<std::is_invocable_r_v<F, Initializer, std::size_t, std::size_t>, int> = 0
+>
+constexpr inline auto init(Initializer const& _init)
+{
+    struct Init : public mat_expr<M, N, F, Init> {
+        Initializer const& initializer;
+
+        constexpr Init(Initializer const& _init) noexcept : initializer{_init} {}
+        constexpr F operator()(int i, int j) const { return initializer(i, j); }
+    };
+
+    return Init{static_cast<Initializer const&>(_init)};
+}
+// }}}
 // {{{ matrix transform(A, B) -> C
 // Transforms two matrices into one by applying given binary operator on each coefficient.
 template<
@@ -94,6 +127,30 @@ constexpr inline auto transform(mat_expr<M, N, F, A> const& a,
     return Mapping{static_cast<A const&>(a), static_cast<B const&>(b), op};
 }
 // }}}
+// {{{ abs(vec)
+template<
+    std::size_t M,
+    std::size_t N,
+    typename F,
+    typename A,
+    typename std::enable_if_t<std::is_arithmetic_v<F>, std::size_t> = 0
+>
+constexpr inline auto abs(mat_expr<M, N, F, A> const& a) noexcept
+{
+    // XXX: C API provides fabs/fabsl/fabsf, but that's not quite compatible with function overloading and not constexpr either.
+    struct Abs : public mat_expr<M, N, F, Abs>
+    {
+        A const& a;
+        constexpr Abs(A const& _a) noexcept : a{_a} {}
+        constexpr F operator()(std::size_t i, std::size_t j) const noexcept {
+            auto && v = a(i, j);
+            return v < zero<F> ? -v : v;
+        }
+    };
+
+    return Abs{*static_cast<A const*>(&a)};
+}
+// }}}
 // {{{ matrix addition / subtraction
 template <std::size_t M, std::size_t N, typename F, typename A, typename B>
 constexpr inline auto operator+(mat_expr<M, N, F, A> const& a,
@@ -107,6 +164,12 @@ constexpr inline auto operator-(mat_expr<M, N, F, A> const& a,
                                 mat_expr<M, N, F, B> const& b)
 {
     return transform(a, b, [](F const& x, F const& y) constexpr { return x - y; });
+}
+
+template <std::size_t M, std::size_t N, typename F, typename A>
+constexpr inline auto operator-(mat_expr<M, N, F, A> const& a)
+{
+    return -one<F> * a;
 }
 // }}}
 // {{{ scalar multiplication
@@ -351,6 +414,28 @@ constexpr inline F det(mat_expr<N, N, F, A> const& a) noexcept
     }
 
     return v;
+}
+// }}}
+
+// {{{ outer product (cross product)
+template <typename F, typename A, typename B>
+constexpr inline auto cross_product(mat_expr<3, 1, F, A> const& u,
+                                    mat_expr<3, 1, F, B> const& v) noexcept
+{
+    struct CrossProduct : public mat_expr<3, 1, F, CrossProduct> {
+        A const& u;
+        B const& v;
+        constexpr CrossProduct(A const& _u, B const& _v) : u{_u}, v{_v} {}
+        constexpr F operator()(std::size_t i, std::size_t j) const noexcept {
+            switch (i + j - 1) {
+                case 0: return u[1] * v[2] - u[2] * v[1];
+                case 1: return u[2] * v[0] - u[0] * v[2];
+                case 2: return u[0] * v[1] - u[1] * v[0];
+                default: return F{}; // XXX should never happen
+            }
+        }
+    };
+    return CrossProduct{*static_cast<A const*>(&u), *static_cast<B const*>(&v)};
 }
 // }}}
 

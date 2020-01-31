@@ -18,8 +18,8 @@
 
 namespace smath {
 
-template <typename E, typename F>
-inline std::ostream& operator<<(std::ostream& os, vec_expr<E, F> const& e)
+template <std::size_t N, typename F>
+inline std::ostream& operator<<(std::ostream& os, vec<N, F> const& e)
 {
     os << '(';
     for (std::size_t i = 0; i < e.size(); ++i)

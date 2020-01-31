@@ -21,6 +21,34 @@ using namespace smath;
 
 TEST_CASE("util.times")
 {
+    SECTION("count 0") {
+        vector<int> hits;
+        for (auto const& i : times(0, 0, 1))
+            hits.push_back(i);
+
+        REQUIRE(hits.empty());
+    }
+
+    SECTION("count 1") {
+        vector<int> hits;
+        for (auto const& i : times(0, 1, 1))
+            hits.push_back(i);
+
+        REQUIRE(hits.size() == 1);
+        REQUIRE(hits[0] == 0);
+    }
+
+    SECTION("count 1, step 2") {
+        vector<int> hits;
+        auto t = times(1, 2, 3);
+        for (auto const& i : t)
+            hits.push_back(i);
+
+        REQUIRE(hits.size() == 2);
+        REQUIRE(hits[0] == 1);
+        REQUIRE(hits[1] == 4);
+    }
+
     SECTION("step 1") {
         vector<int> hits;
         for (auto const& i : times(0, 3, 1))
@@ -98,6 +126,21 @@ TEST_CASE("util.times2.compose_with_lambda")
     REQUIRE(hits[6] == pair{2, 'a'});
     REQUIRE(hits[7] == pair{2, 'b'});
     REQUIRE(hits[8] == pair{2, 'c'});
+}
+
+TEST_CASE("util.times2.x")
+{
+    vector<pair<int, char>> hits;
+
+    times(0, 1) | times('a', 3) | [&](auto i, auto j) {
+        hits.emplace_back(pair{i, j});
+    };
+
+    REQUIRE(hits.size() == 3);
+
+    REQUIRE(hits[0] == pair{0, 'a'});
+    REQUIRE(hits[1] == pair{0, 'b'});
+    REQUIRE(hits[2] == pair{0, 'c'});
 }
 
 TEST_CASE("util.zipped")

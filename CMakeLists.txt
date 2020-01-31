@@ -79,7 +79,7 @@ if(SMATH_TESTING)
     enable_testing()
     add_executable(test_smath
         smath/test_smath.cpp
-        smath/vec_test.cpp
+        # TODO: smath/vec_test.cpp
         smath/mat_test.cpp
         smath/util_test.cpp
     )
