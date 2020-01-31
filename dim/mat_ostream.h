@@ -1,5 +1,5 @@
 /**
- * This file is part of the "smath" project
+ * This file is part of the "dim" project
  *   Copyright (c) 2020 Christian Parpart <christian@parpart.family>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,24 +11,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
-
-#include <smath/vec.h>
 #include <ostream>
+#include <dim/mat.h>
 
-namespace smath {
+namespace dim {
 
-template <std::size_t N, typename F>
-inline std::ostream& operator<<(std::ostream& os, vec<N, F> const& e)
+template <std::size_t M, std::size_t N, typename F, typename A>
+std::ostream& operator<<(std::ostream& os, mat_expr<M, N, F, A> const& _mat)
 {
-    os << '(';
-    for (std::size_t i = 0; i < e.size(); ++i)
+    os << '{';
+    for (std::size_t i = 0; i < M; ++i)
     {
-        if (i)
+        if (i != 0)
             os << ", ";
-        os << e[i];
+        os << '{';
+        for (std::size_t j = 0; j < N; ++j)
+        {
+            if (j != 0)
+                os << ", ";
+            os << _mat(i, j);
+        }
+        os << '}';
     }
-    os << ')';
+    os << '}';
     return os;
 }
 

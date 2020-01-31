@@ -31,7 +31,7 @@ jobs:
       - name: "build"
         run: cmake --build build/ -- -j3
       - name: "test"
-        run: ./build/test_smath
+        run: ./build/test_dim
   build_clang:
     runs-on: ubuntu-latest
     steps:
@@ -53,4 +53,4 @@ jobs:
       - name: "build"
         run: cmake --build build/ -- -j3
       - name: "test"
-        run: ./build/test_smath
+        run: ./build/test_dim

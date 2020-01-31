@@ -1,5 +1,5 @@
 /**
- * This file is part of the "smath" project
+ * This file is part of the "dim" project
  *   Copyright (c) 2020 Christian Parpart <christian@parpart.family>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +13,9 @@
  */
 #pragma once
 
-#include <smath/isqrt.h>
-#include <smath/value_traits.h>
-#include <smath/util.h>
+#include <dim/isqrt.h>
+#include <dim/value_traits.h>
+#include <dim/util.h>
 
 #include <algorithm>
 #include <array>
@@ -24,7 +24,7 @@
 #include <initializer_list>
 #include <ostream>
 
-namespace smath {
+namespace dim {
 
 /**
  * Base interface for every matrix expression (such as multiplication, addition, complement, det, minor, ...).
@@ -439,5 +439,5 @@ constexpr inline auto cross_product(mat_expr<3, 1, F, A> const& u,
 }
 // }}}
 
-} // namespace smath
+} // namespace dim
 

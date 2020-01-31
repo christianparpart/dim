@@ -1,7 +1,7 @@
 #pragma once
 #include <cstddef>
 
-namespace smath {
+namespace dim {
 
 constexpr inline std::size_t _isqrt_impl(std::size_t sq, std::size_t dlt, std::size_t value)
 {

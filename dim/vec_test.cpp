@@ -1,5 +1,5 @@
 /**
- * This file is part of the "smath" project
+ * This file is part of the "dim" project
  *   Copyright (c) 2020 Christian Parpart <christian@parpart.family>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,16 +11,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <smath/vec.h>
-#include <smath/vec_ostream.h>
-#include <smath/util.h>
+#include <dim/vec.h>
+#include <dim/vec_ostream.h>
+#include <dim/util.h>
 
 #include <iostream>
 
 #include <catch2/catch.hpp>
 
 using namespace std;
-using namespace smath;
+using namespace dim;
 
 constexpr vec<3, double> get_vec()
 {

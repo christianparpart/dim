@@ -1,6 +1,6 @@
 #pragma once
 
-namespace smath {
+namespace dim {
 
 template <typename T>
 constexpr static T zero = T(0);

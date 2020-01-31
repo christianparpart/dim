@@ -1,5 +1,5 @@
 /**
- * This file is part of the "smath" project
+ * This file is part of the "dim" project
  *   Copyright (c) 2020 Christian Parpart <christian@parpart.family>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +13,10 @@
  */
 #pragma once
 
-#include <smath/isqrt.h>
-#include <smath/mat_expr.h>
-#include <smath/value_traits.h>
-#include <smath/util.h>
+#include <dim/isqrt.h>
+#include <dim/mat_expr.h>
+#include <dim/value_traits.h>
+#include <dim/util.h>
 
 #include <algorithm>
 #include <array>
@@ -25,7 +25,7 @@
 #include <initializer_list>
 #include <ostream>
 
-namespace smath {
+namespace dim {
 
 /**
  * Represents a dense M-by-N matrix of scalar type F.
@@ -204,4 +204,4 @@ constexpr inline auto ones()
 }
 // }}}
 
-} // namespace smath
+} // namespace dim

@@ -1,4 +1,4 @@
 "linear algebra":
-  - smath/mat*.h
+  - dim/mat*.h
 test:
   - src/**/*_test.cpp

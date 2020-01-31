@@ -1,5 +1,5 @@
 /**
- * This file is part of the "smath" project
+ * This file is part of the "dim" project
  *   Copyright (c) 2020 Christian Parpart <christian@parpart.family>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,14 +13,14 @@
  */
 #pragma once
 
-#include <smath/mat_expr.h>
+#include <dim/mat_expr.h>
 
 #include <algorithm>
 #include <type_traits>
 #include <array>
 #include <cstddef>
 
-namespace smath {
+namespace dim {
 
 template <std::size_t N, typename F>
 class vec : public mat_expr<N, 1, F, vec<N, F>> {

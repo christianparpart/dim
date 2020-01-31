@@ -1,5 +1,5 @@
 /**
- * This file is part of the "smath" project
+ * This file is part of the "dim" project
  *   Copyright (c) 2020 Christian Parpart <christian@parpart.family>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,13 +13,13 @@
  */
 #pragma once
 
-#include <smath/value_traits.h>
+#include <dim/value_traits.h>
 
 #include <algorithm>
 #include <tuple>
 #include <cstddef>
 
-namespace smath {
+namespace dim {
 
 template <typename I, typename T>
 struct _TimesIterator {

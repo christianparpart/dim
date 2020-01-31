@@ -1,5 +1,5 @@
 /**
- * This file is part of the "smath" project
+ * This file is part of the "dim" project
  *   Copyright (c) 2020 Christian Parpart <christian@parpart.family>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,7 +11,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma once
 
-#define CATCH_CONFIG_MAIN
-#include <catch2/catch.hpp>
+#include <dim/vec.h>
+#include <ostream>
 
+namespace dim {
+
+template <std::size_t N, typename F>
+inline std::ostream& operator<<(std::ostream& os, vec<N, F> const& e)
+{
+    os << '(';
+    for (std::size_t i = 0; i < e.size(); ++i)
+    {
+        if (i)
+            os << ", ";
+        os << e[i];
+    }
+    os << ')';
+    return os;
+}
+
+} // end namespace

@@ -23,5 +23,5 @@ jobs:
     - name: "Build"
       run: cmake --build build/
     - name: "test"
-      run: .\build\test_smath
+      run: .\build\test_dim
 

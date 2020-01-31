@@ -1,4 +1,4 @@
-\<smath\> - symbolic math C++ library
+\<dim\> - symbolic math C++ library
 =====================================
 
 Small playground library for porting my F# code for fun to modern C++.
