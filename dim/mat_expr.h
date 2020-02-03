@@ -29,14 +29,18 @@ namespace dim {
 /**
  * Base interface for every matrix expression (such as multiplication, addition, complement, det, minor, ...).
  */
-template<std::size_t M, std::size_t N, typename F, typename A>
+template <std::size_t M, std::size_t N, typename F, typename A>
 struct mat_expr
 {
+    using base_type = mat_expr<M, N, F, A>;
+    static constexpr std::size_t row_count = M;
+    static constexpr std::size_t column_count = N;
+
     constexpr F operator()(std::size_t i, std::size_t j) const noexcept {
         return static_cast<A const&>(*this)(i, j);
     }
 
-    constexpr F const& operator()(std::size_t i) const noexcept
+    constexpr F operator()(std::size_t i) const noexcept
     {
         if constexpr (M == 1)
             return (*this)(0, i);
@@ -89,27 +93,51 @@ template<
     typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0,
     typename std::enable_if_t<std::is_invocable_r_v<F, Initializer, std::size_t, std::size_t>, int> = 0
 >
-constexpr inline auto init(Initializer const& _init)
+constexpr inline auto init(Initializer _init)
 {
     struct Init : public mat_expr<M, N, F, Init> {
-        Initializer const& initializer;
-
-        constexpr Init(Initializer const& _init) noexcept : initializer{_init} {}
-        constexpr F operator()(int i, int j) const { return initializer(i, j); }
+        Initializer initializer;
+        constexpr Init(Initializer _init) noexcept : initializer{std::move(_init)} {}
+        constexpr F operator()(std::size_t i, std::size_t j) const { return initializer(i, j); }
     };
 
     return Init{static_cast<Initializer const&>(_init)};
 }
 // }}}
-// {{{ matrix transform(A, B) -> C
+// {{{ matrix transform(A) -> B
 // Transforms two matrices into one by applying given binary operator on each coefficient.
 template<
     std::size_t M,
     std::size_t N,
     typename F,
     typename A,
+    typename UnaryOp,
+    typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0,
+    typename std::enable_if_t<std::is_invocable_r_v<F, UnaryOp, F>, int> = 0
+>
+constexpr inline auto transform(mat_expr<M, N, F, A> const& a, UnaryOp const& op)
+{
+    //typename std::enable_if_t<std::is_invocable_r_v<F, Initializer, std::size_t, std::size_t>, int> = 0
+    struct Mapping : public mat_expr<M, N, F, Mapping> {
+        A const& a;
+        UnaryOp op;
+        constexpr Mapping(A const& _a, UnaryOp _op) noexcept : a{_a}, op{std::move(_op)} {}
+        constexpr F operator()(std::size_t i, std::size_t j) const { return op(a(i, j)); }
+    };
+
+    return Mapping{static_cast<A const&>(a), op};
+}
+// }}}
+// {{{ matrix transform(A, B) -> C
+template<
+    std::size_t M,
+    std::size_t N,
+    typename F,
+    typename A,
     typename B,
-    typename BinaryOp
+    typename BinaryOp,
+    typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0,
+    typename std::enable_if_t<std::is_invocable_r_v<F, BinaryOp, F, F>, int> = 0
 >
 constexpr inline auto transform(mat_expr<M, N, F, A> const& a,
                                 mat_expr<M, N, F, B> const& b,
@@ -118,9 +146,9 @@ constexpr inline auto transform(mat_expr<M, N, F, A> const& a,
     struct Mapping : public mat_expr<M, N, F, Mapping> {
         A const& a;
         B const& b;
-        BinaryOp const& op;
+        BinaryOp op;
 
-        constexpr Mapping(A const& _a, B const& _b, BinaryOp const& _op) noexcept : a{_a}, b{_b}, op{_op} {}
+        constexpr Mapping(A const& _a, B const& _b, BinaryOp _op) noexcept : a{_a}, b{_b}, op{std::move(_op)} {}
         constexpr F operator()(int i, int j) const { return op(a(i, j), b(i, j)); }
     };
 
@@ -148,7 +176,7 @@ constexpr inline auto abs(mat_expr<M, N, F, A> const& a) noexcept
         }
     };
 
-    return Abs{*static_cast<A const*>(&a)};
+    return Abs{static_cast<A const&>(a)};
 }
 // }}}
 // {{{ matrix addition / subtraction
@@ -169,7 +197,7 @@ constexpr inline auto operator-(mat_expr<M, N, F, A> const& a,
 template <std::size_t M, std::size_t N, typename F, typename A>
 constexpr inline auto operator-(mat_expr<M, N, F, A> const& a)
 {
-    return -one<F> * a;
+    return transform(a, [](F const& v) { return -v; });
 }
 // }}}
 // {{{ scalar multiplication
@@ -178,23 +206,26 @@ template<
     std::size_t N,
     typename F,
     typename A,
-    typename std::enable_if_t<std::is_arithmetic_v<F>, std::size_t> = 0
+    typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0,
+    typename std::enable_if_t<std::is_base_of_v<mat_expr<M, N, F, A>, A>, int> = 0
 >
 constexpr inline auto operator*(F s, mat_expr<M, N, F, A> const& a)
 {
-    struct ScalarMult : public mat_expr<M, N, F, ScalarMult> {
-        F s;
-        A const& a;
-
-        constexpr ScalarMult(F _s, A const& _a) noexcept : s{_s}, a{_a} {}
-        constexpr F operator()(int i, int j) const { return s * a(i, j); }
-    };
-
-    return ScalarMult{s, static_cast<A const&>(a)};
+    return transform(a, [s](F const& v) { return s * v; });
 }
 // }}}
 // {{{ matrix multiplication
-template<std::size_t M, std::size_t N, std::size_t K, typename F, typename A, typename B>
+template<
+    std::size_t M,
+    std::size_t N,
+    std::size_t K,
+    typename F,
+    typename A,
+    typename B,
+    typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0,
+    typename std::enable_if_t<std::is_base_of_v<mat_expr<M, N, F, A>, A>, int> = 0,
+    typename std::enable_if_t<std::is_base_of_v<mat_expr<N, K, F, B>, B>, int> = 0
+>
 constexpr inline auto operator*(mat_expr<M, N, F, A> const& a,
                                 mat_expr<N, K, F, B> const& b)
 {
@@ -202,11 +233,12 @@ constexpr inline auto operator*(mat_expr<M, N, F, A> const& a,
         A const& a;
         B const& b;
         constexpr MatMult(A const& _a, B const& _b) noexcept : a{_a}, b{_b} {}
-        constexpr F operator()(int i, int j) const {
-            auto v = zero<F>;
-            for (std::size_t l : times(0u, N))
-                v += a(i, l) * b(l, j);
-            return v;
+        constexpr F operator()(std::size_t i, std::size_t j) const {
+            return reduce(
+                times(0u, N),
+                zero<F>,
+                [this, i, j](auto acc, auto l) constexpr -> F { return acc + a(i, l) * b(l, j); }
+            );
         }
     };
 
@@ -284,10 +316,11 @@ template<
 >
 constexpr inline F trace(mat_expr<N, N, F, A> const& a)
 {
-    F acc = zero<F>;
-    for (std::size_t k : times(0u, N))
-        acc = acc + a(k, k);
-    return acc;
+    return reduce(
+        times(0u, N),
+        zero<F>,
+        [&](F const& acc, std::size_t k) constexpr -> F { return acc + a(k, k); }
+    );
 }
 
 template <std::size_t M, std::size_t N, typename F, typename A>
@@ -394,26 +427,32 @@ constexpr inline F det(mat_expr<N, N, F, A> const& a) noexcept
 {
     auto const [expansion_index, expandByRow] = find_expansion_vector(a);
 
-    F v = zero<F>;
-
     if (expandByRow)
     {
         std::size_t const i = expansion_index;
-        for (std::size_t j : times(0u, N))
-            v += (i + j) % 2 == 0
-                ? +a(i, j) * det(complement(a, i, j))
-                : -a(i, j) * det(complement(a, i, j));
+        return reduce(
+            times(0u, N),
+            zero<F>,
+            [&](F const& acc, std::size_t j) constexpr -> F {
+                return (i + j) % 2 == 0
+                    ? acc + a(i, j) * det(complement(a, i, j))
+                    : acc - a(i, j) * det(complement(a, i, j));
+            }
+        );
     }
     else // expand by row
     {
         std::size_t const j = expansion_index;
-        for (std::size_t i : times(0u, N))
-            v += (i + j) % 2 == 0
-                ? +a(i, j) * det(complement(a, i, j))
-                : -a(i, j) * det(complement(a, i, j));
+        return reduce(
+            times(0u, N),
+            zero<F>,
+            [&](F const& acc, std::size_t i) constexpr -> F {
+                return (i + j) % 2 == 0
+                    ? acc + a(i, j) * det(complement(a, i, j))
+                    : acc - a(i, j) * det(complement(a, i, j));
+            }
+        );
     }
-
-    return v;
 }
 // }}}
 
@@ -435,7 +474,7 @@ constexpr inline auto cross_product(mat_expr<3, 1, F, A> const& u,
             }
         }
     };
-    return CrossProduct{*static_cast<A const*>(&u), *static_cast<B const*>(&v)};
+    return CrossProduct{static_cast<A const&>(u), static_cast<B const&>(v)};
 }
 // }}}
 

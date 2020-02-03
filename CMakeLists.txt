@@ -14,7 +14,9 @@ option(DIM_EMBEDDED_FMTLIB "dim: uses embedded fmtlib [default: ${MASTER_PROJECT
 option(DIM_EMBEDDED_CATCH2 "dim: uses embedded catch2 for testing [default: ${MASTER_PROJECT}]" ${MASTER_PROJECT})
 
 # setting defaults
-set(CMAKE_CXX_STANDARD 17)
+if (NOT("${CMAKE_CXX_STANDARD}"))
+    set(CMAKE_CXX_STANDARD 17)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -81,6 +83,7 @@ if(DIM_TESTING)
         dim/test_dim.cpp
         dim/vec_test.cpp
         dim/mat_test.cpp
+        dim/mat_solver_test.cpp
         dim/util_test.cpp
     )
     target_link_libraries(test_dim dim fmt::fmt-header-only Catch2::Catch2)

@@ -32,32 +32,18 @@ TEST_CASE("mat.ctor")
     }
 
     SECTION("init") {
-        // TODO: (GCC) why is constexpr here not working?
-        auto const static a = init<2, 3, int>([](std::size_t i, std::size_t j) constexpr {
+        auto constexpr static a = init<2, 3, int>([](std::size_t i, std::size_t j) constexpr {
             return 3 * i + j;
         });
 
-        REQUIRE(a(0, 0) == 0);
-        REQUIRE(a(0, 1) == 1);
-        REQUIRE(a(0, 2) == 2);
-
-        REQUIRE(a(1, 0) == 3);
-        REQUIRE(a(1, 1) == 4);
-        REQUIRE(a(1, 2) == 5);
+        CHECK(a == mat<2, 3, int>{0, 1, 2, 3, 4, 5});
     }
 
     SECTION("lambda element-initializer") {
         auto constexpr static a = mat<2, 3, int>{[](auto i, auto j) constexpr {
             return 3 * i + j;
         }};
-
-        REQUIRE(a(0, 0) == 0);
-        REQUIRE(a(0, 1) == 1);
-        REQUIRE(a(0, 2) == 2);
-
-        REQUIRE(a(1, 0) == 3);
-        REQUIRE(a(1, 1) == 4);
-        REQUIRE(a(1, 2) == 5);
+        CHECK(a == mat<2, 3, int>{0, 1, 2, 3, 4, 5});
     }
 }
 
@@ -66,55 +52,46 @@ TEST_CASE("mat.eq")
     auto constexpr a = mat<2, 3, int>{1, 3, 5,
                                       2, 4, 6};
 
-    REQUIRE(a(0, 0) == 1);
-    REQUIRE(a(0, 1) == 3);
-    REQUIRE(a(0, 2) == 5);
+    CHECK(a(0, 0) == 1);
+    CHECK(a(0, 1) == 3);
+    CHECK(a(0, 2) == 5);
 
-    REQUIRE(a(1, 0) == 2);
-    REQUIRE(a(1, 1) == 4);
-    REQUIRE(a(1, 2) == 6);
+    CHECK(a(1, 0) == 2);
+    CHECK(a(1, 1) == 4);
+    CHECK(a(1, 2) == 6);
 }
 
 TEST_CASE("mat.zeros.squared")
 {
     auto constexpr static z = zeros<2, double>();
-    REQUIRE(z(0, 0) == 0);
-    REQUIRE(z(0, 1) == 0);
-    REQUIRE(z(1, 0) == 0);
-    REQUIRE(z(1, 1) == 0);
+    CHECK(z(0, 0) == 0);
+    CHECK(z(0, 1) == 0);
+    CHECK(z(1, 0) == 0);
+    CHECK(z(1, 1) == 0);
 }
 
 TEST_CASE("mat.zeros.non_squared")
 {
     auto constexpr static z = zeros<2, 1, int>();
-    REQUIRE(z(0, 0) == 0);
-    REQUIRE(z(1, 0) == 0);
+    REQUIRE(z.row_count == 2);
+    REQUIRE(z.column_count == 1);
+    CHECK(z(0, 0) == 0);
+    CHECK(z(1, 0) == 0);
 }
 
 TEST_CASE("mat.diagonals.squared")
 {
     auto constexpr static m = diagonals<2, int>(1);
-    REQUIRE(m(0, 0) == 1);
-    REQUIRE(m(0, 1) == 0);
-    REQUIRE(m(1, 0) == 0);
-    REQUIRE(m(1, 1) == 1);
+    CHECK(m == mat{1, 0, 0, 1});
 }
 
 TEST_CASE("mat.diagonals.variadric")
 {
     auto constexpr static m = diagonals(1, 2, 3);
 
-    static_assert(m(0, 0) == 1);
-    static_assert(m(0, 1) == 0);
-    static_assert(m(0, 2) == 0);
-
-    static_assert(m(1, 0) == 0);
-    static_assert(m(1, 1) == 2);
-    static_assert(m(1, 2) == 0);
-
-    static_assert(m(2, 0) == 0);
-    static_assert(m(2, 1) == 0);
-    static_assert(m(2, 2) == 3);
+    CHECK(m == mat{1, 0, 0,
+                   0, 2, 0,
+                   0, 0, 3});
 }
 
 TEST_CASE("mat.ones.squared")
@@ -202,14 +179,18 @@ TEST_CASE("mat.neg")
 
 TEST_CASE("mat.scalar_mult")
 {
-    auto constexpr a = mat{1, 2,
-                           3, 4};
-    auto const b = 2 * a;
+    SECTION("times 2") {
+        auto constexpr a = mat{1, 2,
+                               3, 4};
+        static_assert(2 * a == mat{2, 4, 6, 8});
+    }
 
-    REQUIRE(b(0, 0) == 2);
-    REQUIRE(b(0, 1) == 4);
-    REQUIRE(b(1, 0) == 6);
-    REQUIRE(b(1, 1) == 8);
+    SECTION("times -one<F>") {
+        auto constexpr a = mat{1, -2,
+                               3, -4};
+        auto constexpr b = mat{ -one<int> * a };
+        static_assert(b == mat{-1, 2, -3, 4});
+    }
 }
 
 TEST_CASE("mat.mat_mult")
@@ -242,11 +223,21 @@ TEST_CASE("mat.density_and_sparsity")
 TEST_CASE("mat.trace")
 {
     auto constexpr static m = diagonals(1, 2, 3);
-    static_assert(trace(m) == 6);
+    CHECK(trace(m) == 6);
 }
 
 TEST_CASE("mat.transpose")
 {
+    SECTION("vec") {
+        auto constexpr u = mat<1, 3, int>{1, 2, 3};
+        auto constexpr uT = mat<3, 1, int>{1, 2, 3};
+        auto constexpr b = mat{u * uT};
+
+        CHECK(b.row_count == 1);
+        CHECK(b.column_count == 1);
+        CHECK(b(0, 0) == 14);
+    }
+
     SECTION("square") {
         auto constexpr a = mat{1, 2, 3,
                                4, 5, 6,
@@ -254,8 +245,7 @@ TEST_CASE("mat.transpose")
         auto constexpr T = mat{1, 4, 7,
                                2, 5, 8,
                                3, 6, 9};
-        auto const b = transpose(a);
-        REQUIRE(b == T);
+        CHECK(transpose(a) == T);
     }
 
     SECTION("non_square") {

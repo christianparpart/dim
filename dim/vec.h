@@ -35,7 +35,7 @@ class vec : public mat_expr<N, 1, F, vec<N, F>> {
     constexpr vec(mat_expr<N, 1, F, A> const& _expr) noexcept : values_{}
     {
         for (std::size_t i = 0; i < N; ++i)
-            values_[i] = _expr[i];
+            values_[i] = _expr(i);
     }
 
     template <typename Initializer,
@@ -84,10 +84,7 @@ template <std::size_t N, typename F>
 constexpr inline F inner_product(vec<N, F> const& u,
                                  vec<N, F> const& v) noexcept
 {
-    F x = u(0) * v(0);
-    for (std::size_t i = 0; i < u.size(); ++i)
-        x += u(i) * v(i);
-    return x;
+    return (transpose(u) * v)(0, 0);
 }
 
 template <std::size_t N, typename F>
@@ -96,6 +93,7 @@ constexpr inline F operator*(vec<N, F> const& u,
 {
     return inner_product(u, v);
 }
+
 // }}}
 
 } // end namespace

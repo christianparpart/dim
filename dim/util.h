@@ -206,6 +206,7 @@ constexpr inline void for_each(Container const& _container, Lambda const& lambda
     std::for_each(std::begin(_container), std::end(_container), lambda);
 }
 
+// TODO: support a reduce()-version that also accepts an ExecutionPolicy as first param.
 template <typename Container, typename T, typename BinaryOp>
 constexpr inline T reduce(Container const& _container, T _init, BinaryOp _binaryOp)
 {
