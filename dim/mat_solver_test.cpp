@@ -24,7 +24,32 @@ using namespace dim;
 using namespace dim::linear_algebra;
 using namespace dim::linear_algebra::solver;
 
+TEST_CASE("mat_solver.state")
+{
+    auto constexpr static m1 = mat{1, 2, 3,
+                                   4, 5, 6,
+                                   7, 8, 9};
+
+    auto state = State(m1);
+    state.update(elementary::swap_row<int>(0, 1));
+
+    CHECK(state() == mat{4, 5, 6,
+                         1, 2, 3,
+                         7, 8, 9});
+
+    state.update(elementary::scale_row<int>(1, 2));
+
+    CHECK(state() == mat{4, 5, 6,
+                         2, 4, 6,
+                         7, 8, 9});
+}
+
 TEST_CASE("mat_solver.solve")
 {
-    // TODO
+    auto constexpr m1 = mat{1, 2, 3,
+                            0, 1, 4,
+                            5, 6, 0};
+
+    auto const m2 = rowCanonicalForm(m1);
 }
+

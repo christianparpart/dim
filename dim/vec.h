@@ -14,6 +14,7 @@
 #pragma once
 
 #include <dim/mat_expr.h>
+#include <dim/mat_ops.h>
 
 #include <algorithm>
 #include <type_traits>

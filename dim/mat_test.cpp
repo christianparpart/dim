@@ -13,8 +13,11 @@
  */
 #include <dim/mat.h>
 #include <dim/mat_ostream.h>
+#include <dim/mat_ops.h>
+#include <dim/vec.h>
 
 #include <catch2/catch.hpp>
+#include <iostream>
 
 using namespace std;
 using namespace dim;
@@ -259,7 +262,7 @@ TEST_CASE("mat.transpose")
     }
 }
 
-TEST_CASE("mat.complement")
+TEST_CASE("mat.minor")
 {
     auto constexpr a = mat{1, 2, 3,
                            4, 5, 6,
@@ -268,21 +271,21 @@ TEST_CASE("mat.complement")
     SECTION("middle") {
         auto constexpr expected = mat{1, 3,
                                       7, 9};
-        auto const actual = complement(a, 1, 1);
+        auto const actual = minor(a, 1, 1);
         REQUIRE(actual == expected);
     }
 
     SECTION("top left") {
         auto constexpr expected = mat{5, 6,
                                       8, 9};
-        auto const actual = complement(a, 0, 0);
+        auto const actual = minor(a, 0, 0);
         REQUIRE(actual == expected);
     }
 
     SECTION("bottom right") {
         auto constexpr expected = mat{1, 2,
                                       4, 5};
-        auto const actual = complement(a, 2, 2);
+        auto const actual = minor(a, 2, 2);
         REQUIRE(actual == expected);
     }
 }
@@ -317,6 +320,62 @@ TEST_CASE("mat.det")
                                2, 3, 0, 1};
         auto constexpr d = det(a);
         REQUIRE(d == -10);
+    }
+}
+
+TEST_CASE("mat.cofactor")
+{
+    // TODO
+}
+
+TEST_CASE("mat.adjugate")
+{
+    auto constexpr static m = mat{1, 2, 3,
+                                  0, 1, 4,
+                                  5, 6, 0};
+    auto const adj = adjugate(m);
+    auto const expected = mat{-24,  18,  5,
+                               20, -15, -4,
+                               -5,   4,  1};
+    cout << "adj: " << adj << endl;
+    cout << "exp: " << expected << endl;
+    CHECK(adj == expected);
+
+    // CHECK(adjugate(m) == mat{-24,  18,  5,
+    //                           20, -15, -4,
+    //                           -5,   4,  1});
+
+}
+
+TEST_CASE("mat.inverse")
+{
+}
+
+TEST_CASE("mat.column")
+{
+    auto constexpr static m = mat{1, 2, 3,
+                                  4, 5, 6,
+                                  7, 8, 9};
+
+    SECTION("front") {
+        auto const col = column(0, m);
+        CHECK(col == mat<3, 1, int>{1, 4, 7});
+        // TODO: currently crashes (recursion depth, because of crtp related cast with vec{})
+        //CHECK(column(0, m) == vec{1, 4, 7});
+    }
+
+    SECTION("middle") {
+        auto const col = column(1, m);
+        CHECK(col == mat<3, 1, int>{2, 5, 8});
+        // TODO: currently crashes (recursion depth, because of crtp related cast with vec{})
+        //CHECK(column(0, m) == vec{1, 4, 7});
+    }
+
+    SECTION("back") {
+        auto const col = column(2, m);
+        CHECK(col == mat<3, 1, int>{3, 6, 9});
+        // TODO: currently crashes (recursion depth, because of crtp related cast with vec{})
+        //CHECK(column(0, m) == vec{1, 4, 7});
     }
 }
 
@@ -369,7 +428,7 @@ TEST_CASE("mat.elementary.apply")
                                        4, 5, 6,
                                        7, 8, 9};
 
-        auto const m2 = m1 * elementary::swap_row<int>(1, 2);
+        auto const m2 = elementary::swap_row<int>(1, 2) * m1;
 
         CHECK(m2 == mat{1, 2, 3,
                         7, 8, 9,
@@ -381,7 +440,7 @@ TEST_CASE("mat.elementary.apply")
                                        4, 5, 6,
                                        7, 8, 9};
 
-        auto const m2 = elementary::apply(m1, elementary::scale_row<int>(0, 2));
+        auto const m2 = elementary::apply(elementary::scale_row<int>(0, 2), m1);
 
         CHECK(m2 == mat{2, 4, 6,
                         4, 5, 6,
@@ -393,7 +452,7 @@ TEST_CASE("mat.elementary.apply")
                                        3, 1, 2,
                                        4, 5, 6};
 
-        auto const m2 = m1 * elementary::add_scaled_row<int>(0, 2, 1);
+        auto const m2 = elementary::add_scaled_row<int>(0, 2, 1) * m1;
 
         CHECK(m2 == mat{7, 4, 7,
                         3, 1, 2,

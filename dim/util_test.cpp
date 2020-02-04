@@ -158,3 +158,26 @@ TEST_CASE("util.zipped")
     REQUIRE(z[1] == pair{3, 4});
     REQUIRE(z[2] == pair{5, 6});
 }
+
+TEST_CASE("util.compose")
+{
+    SECTION("simple") {
+        auto constexpr doubled = [](int v) { return v + v; };
+        auto constexpr squared = [](int v) { return v * v; };
+        auto constexpr a0 = 1;
+        auto constexpr res = a0 >> compose(doubled) >> compose(squared);
+        static_assert(res == 4);
+    }
+
+    SECTION("withArgs") {
+        auto constexpr a0 = 1;
+        auto constexpr a1 = [](int c, int v) { return c + v; };
+        auto constexpr a2 = [](int c1, int c2, int v) { return c1 + c2 + v; };
+        auto constexpr a3 = [](int c1, int c2, int c3, int v) { return c1 + c2 + c3 + v; };
+        auto constexpr res = a0
+            >> compose(a1, 2)
+            >> compose(a2, 3, 4)
+            >> compose(a3, 5, 6, 7);
+        static_assert(28 == res);
+    }
+}
