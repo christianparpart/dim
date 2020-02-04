@@ -24,16 +24,7 @@ using namespace dim;
 using namespace dim::linear_algebra;
 using namespace dim::linear_algebra::solver;
 
-TEST_CASE("mat_solver.swap_row")
+TEST_CASE("mat_solver.solve")
 {
-    auto constexpr static m1 = mat{1, 2, 3,
-                                   4, 5, 6,
-                                   7, 8, 9};
-
-    auto const m2 = swap_row(m1, 1, 2);
-
-    CHECK(m2 == mat{1, 2, 3,
-                    7, 8, 9,
-                    4, 5, 6});
-
+    // TODO
 }

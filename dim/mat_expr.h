@@ -13,26 +13,36 @@
  */
 #pragma once
 
+#include <dim/concept.h>
 #include <dim/isqrt.h>
-#include <dim/value_traits.h>
 #include <dim/util.h>
+#include <dim/value_traits.h>
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
 #include <ostream>
+#include <variant>
 
 namespace dim {
 
 /**
  * Base interface for every matrix expression (such as multiplication, addition, complement, det, minor, ...).
  */
-template <std::size_t M, std::size_t N, typename F, typename A>
+template <
+    std::size_t M,
+    std::size_t N,
+    typename F,
+    typename A,
+    typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0
+>
 struct mat_expr
 {
     using base_type = mat_expr<M, N, F, A>;
+    using element_type = F;
     static constexpr std::size_t row_count = M;
     static constexpr std::size_t column_count = N;
 
@@ -100,7 +110,6 @@ constexpr inline auto init(Initializer _init)
         constexpr Init(Initializer _init) noexcept : initializer{std::move(_init)} {}
         constexpr F operator()(std::size_t i, std::size_t j) const { return initializer(i, j); }
     };
-
     return Init{static_cast<Initializer const&>(_init)};
 }
 // }}}
@@ -455,7 +464,6 @@ constexpr inline F det(mat_expr<N, N, F, A> const& a) noexcept
     }
 }
 // }}}
-
 // {{{ outer product (cross product)
 template <typename F, typename A, typename B>
 constexpr inline auto cross_product(mat_expr<3, 1, F, A> const& u,
@@ -476,6 +484,181 @@ constexpr inline auto cross_product(mat_expr<3, 1, F, A> const& u,
     };
     return CrossProduct{static_cast<A const&>(u), static_cast<B const&>(v)};
 }
+// }}}
+// {{{ elementary operations
+template<
+    std::size_t M,
+    std::size_t N,
+    typename F,
+    typename A,
+    typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0
+>
+constexpr auto swap_row(mat_expr<M, N, F, A> const& mat, std::size_t a, std::size_t b)
+{
+    assert(a < mat.row_count);
+    assert(b < mat.row_count);
+
+    return init<M, N, F>([a, b, mat = std::ref(mat)](std::size_t i, std::size_t j) constexpr -> F {
+        return i == a ? mat(b, j)
+             : i == b ? mat(a, j)
+                      : mat(i, j);
+    });
+}
+
+template<
+    std::size_t M,
+    std::size_t N,
+    typename F,
+    typename A,
+    typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0
+>
+constexpr auto scale_row(mat_expr<M, N, F, A> const& mat, std::size_t row, F s)
+{
+    assert(row < mat.row_count);
+
+    return init<M, N, F>([row, s, mat = std::ref(mat)](std::size_t i, std::size_t j) constexpr -> F {
+        return i == row ? mat(i, j) * s
+                        : mat(i, j);
+    });
+}
+
+template<
+    std::size_t M,
+    std::size_t N,
+    typename F,
+    typename A,
+    typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0
+>
+constexpr auto add_scaled_row(mat_expr<M, N, F, A> const& mat, std::size_t targetRow, F s, std::size_t row)
+{
+    assert(row < mat.row_count);
+    assert(targetRow < mat.row_count);
+
+    return init<M, N, F>([row, targetRow, s, mat = std::ref(mat)](std::size_t i, std::size_t j) constexpr {
+        return i == targetRow
+            ? mat(i, j) + s * mat(row, j)
+            : mat(i, j);
+    });
+}
+
+template <typename F>
+constexpr inline F kronecker_delta(std::size_t i, std::size_t j) noexcept
+{
+    return i == j ? one<F> : zero<F>;
+}
+
+namespace elementary {
+    struct swap_row_t { std::size_t a; std::size_t b; };
+
+    template <typename F>
+    struct scale_row_t { std::size_t row; F scalar; };
+
+    template <typename F>
+    struct add_scaled_row_t {
+        std::size_t target_row;
+        F scalar;
+        std::size_t row;
+    };
+
+    template <typename F>
+    using operation = std::variant<
+        swap_row_t,
+        scale_row_t<F>,
+        add_scaled_row_t<F>
+    >;
+
+    template <typename F>
+    constexpr auto swap_row(std::size_t a, std::size_t b) noexcept {
+        return operation<F>{swap_row_t{a, b}};
+    }
+
+    template <typename F>
+    constexpr auto scale_row(std::size_t row, F scalar) noexcept {
+        return operation<F>{scale_row_t<F>{row, scalar}};
+    }
+
+    template <typename F>
+    constexpr auto add_scaled_row(std::size_t targetRow, F scalar, std::size_t row) noexcept {
+        return operation<F>{add_scaled_row_t<F>{targetRow, scalar, row}};
+    }
+
+    template<
+        std::size_t M,
+        std::size_t N,
+        typename F,
+        typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0
+    >
+    constexpr auto matrix(operation<F> op)
+    {
+        struct Ops {
+            std::size_t i;
+            std::size_t j;
+            constexpr Ops(std::size_t _i, std::size_t _j) noexcept : i{_i}, j{_j} {}
+            constexpr auto operator()(elementary::swap_row_t const& op) noexcept {
+                return i == op.a ? kronecker_delta<F>(op.b, j)
+                     : i == op.b ? kronecker_delta<F>(op.a, j)
+                                 : kronecker_delta<F>(i, j);
+            }
+            constexpr auto operator()(elementary::scale_row_t<F> const& op) noexcept {
+                return i == op.row ? kronecker_delta<F>(i, j) * op.scalar
+                                   : kronecker_delta<F>(i, j);
+            }
+            constexpr auto operator()(elementary::add_scaled_row_t<F> const& op) noexcept {
+                return i == op.target_row && j == op.row ? kronecker_delta<F>(j, j) * op.scalar
+                                                         : kronecker_delta<F>(i, j);
+            }
+        };
+        struct Elements : public mat_expr<M, N, F, Elements> {
+            elementary::operation<F> op;
+            constexpr explicit Elements(elementary::operation<F> _op) noexcept : op{std::move(_op)} {}
+            constexpr F operator()(std::size_t i, std::size_t j) const noexcept { return std::visit(Ops{i, j}, op); }
+        };
+        return Elements{std::move(op)};
+    }
+
+    /**
+     * Applies given elementary operation @p op to matrix @p mat.
+     */
+    template<
+        std::size_t M,
+        std::size_t N,
+        typename F,
+        typename A,
+        typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0
+    >
+    constexpr auto apply(mat_expr<M, N, F, A> const& mat, elementary::operation<F> op)
+    {
+        struct Ops {
+            A const& mat;
+            std::size_t i;
+            std::size_t j;
+            constexpr Ops(A const& _mat, std::size_t _i, std::size_t _j) noexcept : mat{_mat}, i{_i}, j{_j} {}
+            constexpr auto operator()(elementary::swap_row_t const& op) noexcept { return swap_row(mat, op.a, op.b)(i, j); }
+            constexpr auto operator()(elementary::scale_row_t<F> const& op) noexcept { return scale_row(mat, op.row, op.scalar)(i, j); }
+            constexpr auto operator()(elementary::add_scaled_row_t<F> const& op) noexcept { return add_scaled_row(mat, op.target_row, op.scalar, op.row)(i, j); }
+        };
+        struct Apply : public mat_expr<M, N, F, Apply> {
+            A const& mat;
+            elementary::operation<F> op;
+            constexpr Apply(A const& _mat, elementary::operation<F> _op) noexcept : mat{_mat}, op{std::move(_op)} {}
+            constexpr F operator()(std::size_t i, std::size_t j) const noexcept { return std::visit(Ops{mat, i, j}, op); }
+        };
+        return Apply{static_cast<A const&>(mat), std::move(op)};
+    }
+
+    template<
+        std::size_t M,
+        std::size_t N,
+        typename F,
+        typename A,
+        typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0
+    >
+    constexpr auto operator*(mat_expr<M, N, F, A> const& mat, elementary::operation<F> op)
+    {
+        return apply(mat, std::move(op));
+    }
+}
+
 // }}}
 
 } // namespace dim

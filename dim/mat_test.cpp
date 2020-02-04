@@ -319,3 +319,84 @@ TEST_CASE("mat.det")
         REQUIRE(d == -10);
     }
 }
+
+TEST_CASE("mat.elementary.matrix") {
+    auto constexpr static m = mat{1, 2, 3,
+                                  4, 5, 6,
+                                  7, 8, 9};
+
+    SECTION("swap_row") {
+        auto const e = elementary::matrix<3, 3, int>(elementary::swap_row<int>(0, 1));
+
+        CHECK(e == mat{0, 1, 0,
+                       1, 0, 0,
+                       0, 0, 1});
+
+        CHECK(e * m == mat{4, 5, 6,
+                           1, 2, 3,
+                           7, 8, 9});
+    }
+
+    SECTION("scale_row") {
+        auto const e = elementary::matrix<3, 3, int>(elementary::scale_row<int>(1, 2));
+
+        CHECK(e == mat{1, 0, 0,
+                       0, 2, 0,
+                       0, 0, 1});
+
+        CHECK(e * m == mat{1,  2,  3,
+                           8, 10, 12,
+                           7,  8,  9});
+    }
+
+    SECTION("add_scaled_row") {
+        auto const e = elementary::matrix<3, 3, int>(elementary::add_scaled_row<int>(1, 2, 0));
+
+        CHECK(e == mat{1, 0, 0,
+                       2, 1, 0,
+                       0, 0, 1});
+
+        CHECK(e * m == mat{1, 2, 3,
+                           6, 9, 12,
+                           7, 8, 9});
+    }
+}
+
+TEST_CASE("mat.elementary.apply")
+{
+    SECTION("swap_row") {
+        auto constexpr static m1 = mat{1, 2, 3,
+                                       4, 5, 6,
+                                       7, 8, 9};
+
+        auto const m2 = m1 * elementary::swap_row<int>(1, 2);
+
+        CHECK(m2 == mat{1, 2, 3,
+                        7, 8, 9,
+                        4, 5, 6});
+    }
+
+    SECTION("scale_row") {
+        auto constexpr static m1 = mat{1, 2, 3,
+                                       4, 5, 6,
+                                       7, 8, 9};
+
+        auto const m2 = elementary::apply(m1, elementary::scale_row<int>(0, 2));
+
+        CHECK(m2 == mat{2, 4, 6,
+                        4, 5, 6,
+                        7, 8, 9});
+    }
+
+    SECTION("add_scaled_row") {
+        auto constexpr static m1 = mat{1, 2, 3,
+                                       3, 1, 2,
+                                       4, 5, 6};
+
+        auto const m2 = m1 * elementary::add_scaled_row<int>(0, 2, 1);
+
+        CHECK(m2 == mat{7, 4, 7,
+                        3, 1, 2,
+                        4, 5, 6});
+    }
+}
