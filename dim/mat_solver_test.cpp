@@ -44,12 +44,12 @@ TEST_CASE("mat_solver.state")
                          7, 8, 9});
 }
 
-TEST_CASE("mat_solver.solve")
-{
-    auto constexpr m1 = mat{1, 2, 3,
-                            0, 1, 4,
-                            5, 6, 0};
-
-    auto const m2 = rowCanonicalForm(m1);
-}
+// TEST_CASE("mat_solver.solve") // TODO
+// {
+//     auto constexpr m1 = mat{1, 2, 3,
+//                             0, 1, 4,
+//                             5, 6, 0};
+//
+//     auto const m2 = rowCanonicalForm(m1);
+// }
 

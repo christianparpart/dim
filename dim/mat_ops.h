@@ -68,7 +68,7 @@ template<
     typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0,
     typename std::enable_if_t<std::is_invocable_r_v<F, Initializer, std::size_t, std::size_t>, int> = 0
 >
-constexpr inline auto init(Initializer _init)
+constexpr inline auto init(Initializer _init) noexcept
 {
     struct Init : public mat_expr<M, N, F, Init> {
         Initializer initializer;
@@ -307,21 +307,7 @@ constexpr inline auto transpose(mat_expr<M, N, F, A> const& a)
         constexpr Transpose(A const& _a) noexcept : a{_a} {}
         constexpr F operator()(std::size_t i, std::size_t j) const noexcept { return a(j, i); }
     };
-
     return Transpose{static_cast<A const&>(a)};
-}
-
-template <std::size_t M, std::size_t N, typename F, typename A>
-constexpr inline auto transpose(mat_expr<M, N, F, A>&& a)
-{
-    struct Transpose : public mat_expr<N, M, F, Transpose>
-    {
-        A a;
-        constexpr Transpose(A _a) noexcept : a{std::move(_a)} {}
-        constexpr F operator()(std::size_t i, std::size_t j) const noexcept { return a(j, i); }
-    };
-
-    return Transpose{std::move(static_cast<A const&>(a))};
 }
 
 template<
@@ -493,7 +479,7 @@ constexpr auto swap_row(mat_expr<M, N, F, A> const& mat, std::size_t a, std::siz
     assert(a < mat.row_count);
     assert(b < mat.row_count);
 
-    return init<M, N, F>([a, b, mat = std::ref(mat)](std::size_t i, std::size_t j) constexpr -> F {
+    return init<M, N, F>([a, b, &mat](std::size_t i, std::size_t j) constexpr -> F {
         return i == a ? mat(b, j)
              : i == b ? mat(a, j)
                       : mat(i, j);
@@ -511,7 +497,7 @@ constexpr auto scale_row(mat_expr<M, N, F, A> const& mat, std::size_t row, F s)
 {
     assert(row < mat.row_count);
 
-    return init<M, N, F>([row, s, mat = std::ref(mat)](std::size_t i, std::size_t j) constexpr -> F {
+    return init<M, N, F>([row, s, &mat](std::size_t i, std::size_t j) constexpr -> F {
         return i == row ? mat(i, j) * s
                         : mat(i, j);
     });
@@ -529,7 +515,7 @@ constexpr auto add_scaled_row(mat_expr<M, N, F, A> const& mat, std::size_t targe
     assert(row < mat.row_count);
     assert(targetRow < mat.row_count);
 
-    return init<M, N, F>([row, targetRow, s, mat = std::ref(mat)](std::size_t i, std::size_t j) constexpr {
+    return init<M, N, F>([row, targetRow, s, &mat](std::size_t i, std::size_t j) constexpr {
         return i == targetRow
             ? mat(i, j) + s * mat(row, j)
             : mat(i, j);
@@ -583,7 +569,7 @@ namespace elementary {
         typename F,
         typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0
     >
-    constexpr auto matrix(operation<F> op)
+    constexpr auto matrix(operation<F> op) noexcept
     {
         struct Ops {
             std::size_t i;
@@ -658,9 +644,9 @@ namespace elementary {
 template <std::size_t M, std::size_t N, typename F, typename A>
 constexpr auto cofactor(mat_expr<M, N, F, A> const& _mat)
 {
-    return init<M, N, F>([mat = std::ref(_mat)](std::size_t i, std::size_t j) constexpr -> F {
-        auto const sgn = (i + j) % 2 == 0 ? one<F> : -one<F>;
-        return sgn * det(minor(mat.get(), i, j));
+    return init<M, N, F>([&](std::size_t i, std::size_t j) constexpr -> F {
+        return (i + j) % 2 == 0 ? +det(minor(_mat, i, j))
+                                : -det(minor(_mat, i, j));
     });
 }
 // }}}
