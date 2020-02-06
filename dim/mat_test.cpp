@@ -347,14 +347,15 @@ TEST_CASE("mat.adjugate")
 
 TEST_CASE("mat.inverse")
 {
+    // {{2, -3, 1},{2,0,-1},{1,4,5}}
     auto constexpr static m = mat{1, 2, 3,
                                   0, 1, 4,
                                   5, 6, 0};
+    REQUIRE(is_invertible(m));
     auto const mi = inverse(m);
-    REQUIRE(mi.has_value());
-    CHECK(*mi == mat{-24,  18,  5,
-                      20, -15, -4,
-                      -5,  4,  1});
+    CHECK(mi == mat{-24,  18,  5,
+                     20, -15, -4,
+                     -5,  4,  1});
 }
 
 TEST_CASE("mat.column")
