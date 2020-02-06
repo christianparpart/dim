@@ -297,19 +297,6 @@ constexpr inline F trace(mat_expr<N, N, F, A> const& a)
     );
 }
 
-// TODO: how to avoid doubling the algorithms with a cref/&& version?
-template <std::size_t M, std::size_t N, typename F, typename A>
-constexpr inline auto transpose(mat_expr<M, N, F, A> const& a)
-{
-    struct Transpose : public mat_expr<N, M, F, Transpose>
-    {
-        A const& a;
-        constexpr Transpose(A const& _a) noexcept : a{_a} {}
-        constexpr F operator()(std::size_t i, std::size_t j) const noexcept { return a(j, i); }
-    };
-    return Transpose{static_cast<A const&>(a)};
-}
-
 template<
     std::size_t M,
     std::size_t N,
@@ -338,6 +325,14 @@ constexpr inline auto minor(mat_expr<M, N, F, A> const& a, std::size_t i, std::s
         }
     };
     return Minor{static_cast<A const&>(a), i, j};
+}
+// }}}
+// {{{ transpose
+// TODO: how to avoid doubling the algorithms with a cref/&& version?
+template <std::size_t M, std::size_t N, typename F, typename A>
+constexpr inline auto transpose(mat_expr<M, N, F, A> const& a)
+{
+    return init<N, M, F>([&](std::size_t i, std::size_t j) constexpr -> F { return a(j, i); });
 }
 // }}}
 // {{{ det(A)
