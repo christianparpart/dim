@@ -34,6 +34,18 @@ TEST_CASE("mat.ctor")
         REQUIRE(a(0, 2) == 0.2);
     }
 
+    SECTION("matrix via 2D initializer_list") {
+        auto constexpr static a = mat<2, 3, int>{{1, 11, 111},
+                                                 {2, 22, 222}};
+
+        auto constexpr static e = mat<2, 3, int>{1, 11, 111,
+                                                 2, 22, 222};
+
+        CHECK(a.row_count == 2);
+        CHECK(a.column_count == 3);
+        CHECK(a == e);
+    }
+
     SECTION("init") {
         auto constexpr static a = mat{init<2, 3, int>([](std::size_t i, std::size_t j) constexpr -> int {
             return 3 * i + j;

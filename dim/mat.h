@@ -65,6 +65,36 @@ class mat : public mat_expr<M, N, F, mat<M, N, F>> {
     }
 
     /**
+     * Constructs a matrix by a given 2D-nested initializer_list for a more visual readability.
+     *
+     * This allows you constructing non-square matrices via initializer lists, however,
+     * there is no deduction guide available as there is no way to deduce the size
+     * of an initializer_list in a template argument type deduction guide friendly way.
+     *
+     * Note, any superfluous elements in the initializer list are discarded.
+     */
+    constexpr mat(std::initializer_list<std::initializer_list<F>> _init) : values_{{}}
+    {
+        std::size_t i = 0;
+        for (auto row : _init)
+        {
+            if (i < M)
+            {
+                std::size_t j = 0;
+                for (auto v : row)
+                {
+                    if (j < N)
+                    {
+                        values_[i * N + j] = v;
+                        j++;
+                    }
+                }
+                i++;
+            }
+        }
+    }
+
+    /**
      * Constructs a M-by-N matrix with each element initialized by the
      * given initializer function.
      *
@@ -104,6 +134,9 @@ class mat : public mat_expr<M, N, F, mat<M, N, F>> {
      */
     constexpr F& operator()(std::size_t i, std::size_t j) { return values_[i * N + j]; }
 
+    /**
+     * Provides a convenient element access to one-dimensional matrices.
+     */
     constexpr F const& operator()(std::size_t i) const noexcept
     {
         if constexpr (M == 1 || N == 1)
