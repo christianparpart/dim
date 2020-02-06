@@ -37,6 +37,8 @@ struct mat_expr
     static constexpr std::size_t row_count = M;
     static constexpr std::size_t column_count = N;
 
+    constexpr operator A const& () const noexcept { return static_cast<A const&>(*this); }
+
     constexpr F operator()(std::size_t i, std::size_t j) const noexcept {
         return static_cast<A const&>(*this)(i, j);
     }

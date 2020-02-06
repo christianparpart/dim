@@ -99,7 +99,7 @@ constexpr inline auto transform(mat_expr<M, N, F, A> const& a, UnaryOp const& op
         constexpr F operator()(std::size_t i, std::size_t j) const { return op(a(i, j)); }
     };
 
-    return Mapping{static_cast<A const&>(a), op};
+    return Mapping{a, op};
 }
 // }}}
 // {{{ matrix transform(A, B) -> C
@@ -126,7 +126,7 @@ constexpr inline auto transform(mat_expr<M, N, F, A> const& a,
         constexpr F operator()(int i, int j) const { return op(a(i, j), b(i, j)); }
     };
 
-    return Mapping{static_cast<A const&>(a), static_cast<B const&>(b), op};
+    return Mapping{a, b, op};
 }
 // }}}
 // {{{ abs(vec)
@@ -150,7 +150,7 @@ constexpr inline auto abs(mat_expr<M, N, F, A> const& a) noexcept
         }
     };
 
-    return Abs{static_cast<A const&>(a)};
+    return Abs{a};
 }
 // }}}
 // {{{ matrix addition / subtraction
@@ -216,7 +216,7 @@ constexpr inline auto operator*(mat_expr<M, N, F, A> const& a,
         }
     };
 
-    return MatMult{static_cast<A const&>(a), static_cast<B const&>(b)};
+    return MatMult{a, b};
 }
 // }}}
 // {{{ other free functions
@@ -324,7 +324,7 @@ constexpr inline auto minor(mat_expr<M, N, F, A> const& a, std::size_t i, std::s
                     : a(k + 1, l + 1);
         }
     };
-    return Minor{static_cast<A const&>(a), i, j};
+    return Minor{a, i, j};
 }
 // }}}
 // {{{ transpose
@@ -442,7 +442,7 @@ constexpr inline auto cross_product(mat_expr<3, 1, F, A> const& u,
             }
         }
     };
-    return CrossProduct{static_cast<A const&>(u), static_cast<B const&>(v)};
+    return CrossProduct{u, v};
 }
 // }}}
 // {{{ column
@@ -458,7 +458,7 @@ auto column(std::size_t n, mat_expr<M, N, F, A> const& mat)
         constexpr Column(std::size_t _n, A const& _mat) noexcept : n{_n}, mat{_mat} {}
         constexpr F operator()(std::size_t i, std::size_t /*j*/) const noexcept { return mat(i, n); }
     };
-    return Column{n, static_cast<A const&>(mat)};
+    return Column{n, mat};
 }
 // }}}
 // {{{ elementary operations
@@ -619,7 +619,7 @@ namespace elementary {
             constexpr Apply(elementary::operation<F> _op, A const& _mat) noexcept : op{std::move(_op)}, mat{_mat} {}
             constexpr F operator()(std::size_t i, std::size_t j) const noexcept { return std::visit(Ops{mat, i, j}, op); }
         };
-        return Apply{std::move(op), static_cast<A const&>(mat)};
+        return Apply{std::move(op), mat};
     }
 
     template<
