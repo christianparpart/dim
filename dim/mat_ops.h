@@ -68,14 +68,14 @@ template<
     typename std::enable_if_t<std::is_arithmetic_v<F>, int> = 0,
     typename std::enable_if_t<std::is_invocable_r_v<F, Initializer, std::size_t, std::size_t>, int> = 0
 >
-constexpr inline auto init(Initializer _init) noexcept
+constexpr inline auto init(Initializer && _init) noexcept
 {
     struct Init : public mat_expr<M, N, F, Init> {
         Initializer initializer;
-        constexpr Init(Initializer _init) noexcept : initializer{std::move(_init)} {}
+        constexpr Init(Initializer&& _init) noexcept : initializer{std::forward<Initializer>(_init)} {}
         constexpr F operator()(std::size_t i, std::size_t j) const { return initializer(i, j); }
     };
-    return Init{static_cast<Initializer const&>(_init)};
+    return Init{std::forward<Initializer>(_init)};
 }
 // }}}
 // {{{ matrix transform(A) -> B
