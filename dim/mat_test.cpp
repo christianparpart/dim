@@ -334,18 +334,15 @@ TEST_CASE("mat.adjugate")
                                   0, 1, 4,
                                   5, 6, 0};
 
-    // TODO
     auto const adj = adjugate(m);
-    // auto const expected = mat{-24,  18,  5,
-    //                            20, -15, -4,
-    //                            -5,   4,  1};
-    cout << "adj: " << adj << endl;
-    // cout << "exp: " << expected << endl;
-    // CHECK(adj == expected);
+    auto const expected = mat{-24,  18,  5,
+                               20, -15, -4,
+                               -5,   4,  1};
+    CHECK(adj == expected);
 
-    // CHECK(adjugate(m) == mat{-24,  18,  5,
-    //                           20, -15, -4,
-    //                           -5,   4,  1});
+    CHECK(adjugate(m) == mat{-24,  18,  5,
+                              20, -15, -4,
+                              -5,   4,  1});
 }
 
 TEST_CASE("mat.inverse")

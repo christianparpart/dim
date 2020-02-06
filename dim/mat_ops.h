@@ -649,8 +649,10 @@ constexpr auto cofactor(mat_expr<M, N, F, A> const& _mat)
 template <std::size_t M, std::size_t N, typename F, typename A>
 constexpr auto adjugate(mat_expr<M, N, F, A> const& _mat)
 {
-    // TODO: try passing over by copy (not by ref), wtf CRTP ;(
-    return transpose(cofactor(_mat));
+    return init<N, M, F>([&](std::size_t i, std::size_t j) constexpr -> F {
+        return (i + j) % 2 == 0 ? +det(minor(_mat, j, i))
+                                : -det(minor(_mat, j, i));
+    });
 }
 // }}}
 // {{{ inverse
