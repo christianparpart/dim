@@ -51,21 +51,21 @@ TEST_CASE("mat.ctor")
             return 3 * i + j;
         })};
 
-        CHECK(a == mat<2, 3, int>{0, 1, 2, 3, 4, 5});
+        CHECK(a == mat<2, 3, int>{{0, 1, 2}, {3, 4, 5}});
     }
 
     SECTION("lambda element-initializer") {
         auto constexpr static a = mat<2, 3, int>{[](auto i, auto j) constexpr {
             return 3 * i + j;
         }};
-        CHECK(a == mat<2, 3, int>{0, 1, 2, 3, 4, 5});
+        CHECK(a == mat<2, 3, int>{{0, 1, 2}, {3, 4, 5}});
     }
 }
 
 TEST_CASE("mat.eq")
 {
-    auto constexpr a = mat<2, 3, int>{1, 3, 5,
-                                      2, 4, 6};
+    auto constexpr a = mat<2, 3, int>{{1, 3, 5},
+                                      {2, 4, 6}};
 
     CHECK(a(0, 0) == 1);
     CHECK(a(0, 1) == 3);
@@ -210,17 +210,18 @@ TEST_CASE("mat.scalar_mult")
 
 TEST_CASE("mat.mat_mult")
 {
-    auto constexpr a = mat<2, 3, int>{1, 2, 3,
-                                      4, 5, 6};
-    auto constexpr b = mat<3, 2, int>{6, 5,
-                                      4, 3,
-                                      2, 1};
+    auto constexpr a = mat<2, 3, int>{{1, 2, 3},
+                                      {4, 5, 6}};
+    auto constexpr b = mat<3, 2, int>{{6, 5},
+                                      {4, 3},
+                                      {2, 1}};
     auto const c = a * b;
     REQUIRE(c(0, 0) == 20);
     REQUIRE(c(0, 1) == 14);
     REQUIRE(c(1, 0) == 56);
     REQUIRE(c(1, 1) == 41);
 }
+
 TEST_CASE("mat.density_and_sparsity")
 {
     auto constexpr all_zeros = mat{zeros<3, int>()};
@@ -264,11 +265,11 @@ TEST_CASE("mat.transpose")
     }
 
     SECTION("non_square") {
-        auto constexpr a = mat<2, 3, int>{1, 2, 3,
-                                          4, 5, 6};
-        auto constexpr T = mat<3, 2, int>{1, 4,
-                                          2, 5,
-                                          3, 6};
+        auto constexpr a = mat<2, 3, int>{{1, 2, 3},
+                                          {4, 5, 6}};
+        auto constexpr T = mat<3, 2, int>{{1, 4},
+                                          {2, 5},
+                                          {3, 6}};
         auto const b = transpose(a);
         REQUIRE(b == T);
     }
