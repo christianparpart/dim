@@ -24,6 +24,7 @@
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <optional>
 #include <variant>
 
 namespace dim {
@@ -655,15 +656,36 @@ constexpr auto adjugate(mat_expr<M, N, F, A> const& _mat)
     });
 }
 // }}}
+// {{{ is_invertable
+template <std::size_t M, std::size_t N, typename F, typename A>
+constexpr auto is_invertable(mat_expr<M, N, F, A> const& _mat) -> std::optional<mat<M, N, F>>
+{
+    return det(_mat) != zero<F>;
+}
+// }}}
 // {{{ inverse
 template <std::size_t M, std::size_t N, typename F, typename A>
-constexpr auto inverse(mat_expr<M, N, F, A> const& _mat)
+constexpr auto inverse(mat_expr<M, N, F, A> const& _mat) -> std::optional<mat<M, N, F>>
 {
+#if 0
+    struct Inverse : public mat_expr<M, N, F, Inverse> {
+        mutable std::optional<F> one_div_detM{};
+        A const& mat;
+        constexpr Inverse(A const& _mat) noexcept : mat{_mat} {}
+        constexpr F operator()(std::size_t i, std::size_t j) const {
+            if (!one_div_detM)
+                one_div_detM = {one<F> / det(mat)};
+            return *one_div_detM * adjugate(mat)(i, j);
+        };
+    };
+    return Inverse{_mat};
+#else
     auto const detM = det(_mat);
     if (detM == zero<F>)
         return std::nullopt;
     else
-        return one<F> / detM * adjugate(_mat);
+        return std::optional{mat{one<F> / detM * adjugate(_mat)}};
+#endif
 }
 
 // }}}
